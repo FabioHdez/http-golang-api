@@ -18,6 +18,7 @@
 --
 -- Table structure for table `rateables`
 --
+CREATE DATABASE IF NOT EXISTS `yonkirating`; 
 
 DROP TABLE IF EXISTS `rateables`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
