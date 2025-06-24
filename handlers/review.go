@@ -178,3 +178,45 @@ func GetReviewHandler(w http.ResponseWriter, r *http.Request){
 		return
 	}
 }
+
+func DeleteReviewHandler(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type", "application/json")
+
+	//allow only DELETE
+	if r.Method != http.MethodDelete {
+		w.Header().Set("Allow", http.MethodDelete)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// split the path into segments to get the ID
+	parts := strings.Split(r.URL.Path, "/")
+	// url pattern must be 4 parts /review/id/24
+	if(len(parts) != 4){
+		http.Error(w, "pattern does not exist", http.StatusNotFound)
+		return
+	}
+	id,err := strconv.ParseInt(parts[3],10,64)
+	if err != nil {
+		http.Error(w, "'ID' must be an int", http.StatusBadRequest)
+		return
+	}
+
+	err = db.DeleteReview(DB,id)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("could not delete review: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+	
+	// success
+		data := map[string]string{
+		"Result":"Success",
+	}
+	
+	// encode data to w and catch errors
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		http.Error(w, "Internal Server Error",http.StatusInternalServerError)
+		return
+	}
+}

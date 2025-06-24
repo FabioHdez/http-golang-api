@@ -18,6 +18,7 @@ type Rateable struct {
 	Rating   int    `json:"rating"`
 	Review   string `json:"review"`
 	AuthorID int64  `json:"authorID"`
+	Active   int64  `json:"Active"`
 }
 
 func CreateReview(db *sql.DB, review Rateable) error {
@@ -29,6 +30,7 @@ func CreateReview(db *sql.DB, review Rateable) error {
 	if err != nil {
 		return err
 	}
+	defer query.Close()
 
  	res, err := query.Exec(review.Name, review.Img, review.Rating, review.Review, review.AuthorID)
 	if err != nil {
@@ -73,7 +75,8 @@ func SearchReview(db *sql.DB, searchParams Rateable) ([]Rateable,error){
 		SELECT * FROM rateables WHERE
 		name like ? AND
 		rating like ? AND
-		author_id like ?;
+		author_id like ? AND 
+		active = 1;
 	`
 	
 	rows, err := db.Query(query, name, ratingStr, authorIDStr)
@@ -87,7 +90,7 @@ func SearchReview(db *sql.DB, searchParams Rateable) ([]Rateable,error){
 
 	for rows.Next() {
 		var r Rateable
-		err := rows.Scan(&r.ID,&r.Name,&r.Img,&r.Rating,&r.Review,&r.AuthorID)
+		err := rows.Scan(&r.ID,&r.Name,&r.Img,&r.Rating,&r.Review,&r.AuthorID,&r.Active)
 		if err != nil{
 			return nil,err
 		}
@@ -101,6 +104,7 @@ func GetReview(db *sql.DB, id int64) (Rateable, error) {
 	query:=`
 		SELECT * FROM rateables WHERE
 		id = ?
+		AND active = 1;
 	`
 	row := db.QueryRow(query, id)
 
@@ -111,9 +115,41 @@ func GetReview(db *sql.DB, id int64) (Rateable, error) {
 		&review.Img,
 		&review.Rating,
 		&review.Review,
-		&review.AuthorID)
+		&review.AuthorID,
+		&review.Active)
 
 	err := row.Err()
 
 	return review, err
+}
+
+func DeleteReview(db *sql.DB, id int64) error {
+	query,err := db.Prepare(`
+		UPDATE rateables
+		SET active = 0
+		WHERE id = ? 
+		AND active = 1;
+	`)
+	if err != nil {
+		return err
+	}
+	defer query.Close()
+
+	res, err := query.Exec(id)	
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("no rows were affected")
+	}
+
+	// print rows affected
+	fmt.Printf("Rows affected: %v\n", rowsAffected)
+	return nil
 }
