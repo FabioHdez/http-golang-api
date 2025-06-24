@@ -27,6 +27,8 @@ func main() {
 	http.HandleFunc("/review/create", handlers.CreateReviewHandler)
 	http.HandleFunc("/review/search", handlers.SearchReviewHandler)
 	http.HandleFunc("/review/id/", handlers.GetReviewHandler)
+	http.HandleFunc("/review/update/", func(w http.ResponseWriter, r *http.Request) {fmt.Println("TBA")})
+	http.HandleFunc("/review/delete/", func(w http.ResponseWriter, r *http.Request) {fmt.Println("TBA")})
 
 	http.ListenAndServe(":8000",nil)
 }
