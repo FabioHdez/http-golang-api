@@ -153,3 +153,71 @@ func DeleteReview(db *sql.DB, id int64) error {
 	fmt.Printf("Rows affected: %v\n", rowsAffected)
 	return nil
 }
+
+func UpdateReview(db *sql.DB, reviewChanges Rateable)  error {
+
+	// Build a map based on the Rateables Struct to have some null values
+	// Null values are required in order to take advantage of the COALESCE function in mySQL
+	changes := make(map[string]interface{})
+
+	if reviewChanges.Name != ""{
+		changes["name"] = reviewChanges.Name
+	}
+
+	if reviewChanges.Img != ""{
+		changes["img"] = reviewChanges.Img
+	}
+	
+	if reviewChanges.Rating != -1 {
+		changes["rating"] = reviewChanges.Rating
+	}
+
+	if reviewChanges.Review != ""{
+		changes["review"] = reviewChanges.Review
+	}
+
+	if reviewChanges.AuthorID != -1 {
+		changes["authorID"] = reviewChanges.AuthorID
+	}
+
+	query,err := db.Prepare(`
+		UPDATE rateables
+		SET 
+		name = COALESCE(?,name),
+		img = COALESCE(?,img),
+		rating = COALESCE(?,rating),
+		review = COALESCE(?,review),
+		author_id = COALESCE(?,author_id)
+		WHERE id = ?
+	`)
+	if err != nil {
+		return err
+	}
+	defer query.Close()
+
+	res, err := query.Exec(
+		changes["name"],
+		changes["img"],
+		changes["rating"],
+		changes["review"],
+		changes["authorID"],
+		reviewChanges.ID)
+	
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("no rows were affected")
+	}
+
+	// print rows affected
+	fmt.Printf("Rows affected: %v\n", rowsAffected)
+	return nil
+
+}

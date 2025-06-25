@@ -220,3 +220,82 @@ func DeleteReviewHandler(w http.ResponseWriter, r *http.Request){
 		return
 	}
 }
+
+func UpdateReviewHandler(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type", "application/json")
+	
+	//allow only PATCH
+	// Patch because I do not want to require the user to send all properties
+	if r.Method != http.MethodPatch {
+		fmt.Printf("r.Method: %v\n", r.Method)
+		w.Header().Set("Allow", http.MethodPatch)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}	
+	
+	// split the path into segments to get the ID
+	parts := strings.Split(r.URL.Path, "/")
+	// url pattern must be 4 parts /review/id/24
+	if(len(parts) != 4){
+		http.Error(w, "pattern does not exist", http.StatusNotFound)
+		return
+	}
+	id,err := strconv.ParseInt(parts[3],10,64)
+	if err != nil {
+		http.Error(w, "'ID' must be an int", http.StatusBadRequest)
+		return
+	}
+
+	name := r.URL.Query().Get("name")
+	img := r.URL.Query().Get("img")
+	ratingStr := r.URL.Query().Get("rating") // gets rating as a str
+	review := r.URL.Query().Get("review")
+	authorIDStr := r.URL.Query().Get("authorID") // gets authorID as a str
+
+	// Convert rating to int or sentinel
+	rating, err := strconv.Atoi(ratingStr)
+	if err != nil && ratingStr != "" {
+		http.Error(w, fmt.Sprintf("invalid rating: %s", err.Error()), http.StatusBadRequest)
+		return
+	} else if ratingStr == "" {
+		// sentinel value for empty param (Golang defaults empty ints it to 0)
+		rating = -1
+	}
+	
+
+	// Convert authorID to int
+	authorID, err := strconv.ParseInt(authorIDStr, 10, 64)
+	if err != nil && authorIDStr != "" {
+		http.Error(w, fmt.Sprintf("invalid authorID: %s", err.Error()), http.StatusBadRequest)
+		return
+	} else if authorIDStr == "" {
+		// sentinel value for empty param (Golang defaults empty ints it to 0)
+		authorID = -1
+	}
+
+	changes := db.Rateable{
+		ID: id,
+		Name: name,
+		Img: img,
+		Rating: rating,
+		Review: review,
+		AuthorID: authorID,
+	}
+
+	err = db.UpdateReview(DB,changes)
+	if err != nil {
+		http.Error(w, "could not execute query", http.StatusInternalServerError)
+		return
+	}
+
+	// success
+	data := map[string]string{
+		"Result":"Success",
+	}
+
+	// encode data to w and catch errors
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		http.Error(w, "Internal Server Error",http.StatusInternalServerError)
+		return
+	}
+}
